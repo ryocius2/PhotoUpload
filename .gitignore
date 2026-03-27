@@ -1,0 +1,6 @@
+photos/
+qr_codes/
+*.log
+.env
+__pycache__/
+*.pyc
