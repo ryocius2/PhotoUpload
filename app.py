@@ -60,10 +60,16 @@ def get_photo_count():
     return count
 
 
+VALID_THEMES = {"classic", "kodak", "clear"}
+
+
 @app.route("/")
 def index():
     table = request.args.get("table", "")
-    return render_template("index.html", table=table)
+    theme = request.args.get("theme", "clear")
+    if theme not in VALID_THEMES:
+        theme = "classic"
+    return render_template(f"theme_{theme}.html", table=table, theme=theme)
 
 
 @app.route("/upload", methods=["POST"])

@@ -1,0 +1,752 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Wedding Cam</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=VT323&family=Silkscreen&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+            -webkit-touch-callout: none;
+            user-select: none;
+        }
+
+        html, body {
+            height: 100%;
+            overflow: hidden;
+            position: fixed;
+            width: 100%;
+        }
+
+        body {
+            background: #2a2a2a;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-family: 'VT323', monospace;
+        }
+
+        /* === CAMERA BODY === */
+        .camera {
+            background: linear-gradient(145deg, #8a8a8a, #6b6b6b);
+            border-radius: 18px;
+            padding: 16px;
+            width: 100vw;
+            height: 100dvh;
+            max-width: 430px;
+            box-shadow:
+                0 8px 32px rgba(0,0,0,0.6),
+                inset 0 1px 0 rgba(255,255,255,0.15),
+                inset 0 -2px 0 rgba(0,0,0,0.3);
+            position: relative;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .camera::before {
+            content: '';
+            position: absolute;
+            top: 8px;
+            right: 20px;
+            width: 12px;
+            height: 12px;
+            background: radial-gradient(circle, #1a1a1a 40%, #333 70%);
+            border-radius: 50%;
+            box-shadow: inset 0 1px 2px rgba(0,0,0,0.8);
+        }
+
+        .brand {
+            font-family: 'Silkscreen', monospace;
+            color: #c0c0c0;
+            font-size: 11px;
+            letter-spacing: 3px;
+            text-transform: uppercase;
+            margin-bottom: 8px;
+            text-shadow: 0 -1px 0 rgba(0,0,0,0.4);
+            padding-left: 4px;
+        }
+
+        /* === LCD SCREEN === */
+        .lcd {
+            background: #1a2a1a;
+            border-radius: 8px;
+            padding: 14px;
+            position: relative;
+            box-shadow:
+                inset 0 3px 8px rgba(0,0,0,0.7),
+                0 1px 0 rgba(255,255,255,0.1);
+            overflow: hidden;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .lcd::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: repeating-linear-gradient(
+                0deg,
+                transparent,
+                transparent 2px,
+                rgba(0, 0, 0, 0.03) 2px,
+                rgba(0, 0, 0, 0.03) 4px
+            );
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        .lcd::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: radial-gradient(
+                ellipse at 30% 20%,
+                rgba(255,255,255,0.04) 0%,
+                transparent 60%
+            );
+            pointer-events: none;
+            z-index: 2;
+        }
+
+        /* === STATUS BAR === */
+        .status-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+            position: relative;
+            z-index: 3;
+        }
+
+        .status-item {
+            color: #33ff33;
+            font-size: 18px;
+            text-shadow: 0 0 8px rgba(51, 255, 51, 0.4);
+        }
+
+        .battery {
+            display: flex;
+            align-items: center;
+            gap: 2px;
+        }
+
+        .battery-body {
+            width: 24px;
+            height: 12px;
+            border: 1.5px solid #33ff33;
+            border-radius: 2px;
+            padding: 1px;
+            position: relative;
+        }
+
+        .battery-body::after {
+            content: '';
+            position: absolute;
+            right: -4px;
+            top: 2px;
+            width: 3px;
+            height: 6px;
+            background: #33ff33;
+            border-radius: 0 1px 1px 0;
+        }
+
+        .battery-fill {
+            width: 100%;
+            height: 100%;
+            background: #33ff33;
+            border-radius: 1px;
+        }
+
+        .shot-counter {
+            font-family: 'VT323', monospace;
+            color: #ffaa00;
+            font-size: 22px;
+            text-shadow: 0 0 8px rgba(255, 170, 0, 0.5);
+        }
+
+        /* === MAIN CONTENT AREA === */
+        .viewfinder {
+            background: #0a150a;
+            border-radius: 4px;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            z-index: 3;
+            padding: 20px;
+        }
+
+        /* Corner brackets */
+        .viewfinder::before,
+        .viewfinder::after {
+            content: '';
+            position: absolute;
+            width: 30px;
+            height: 30px;
+            border-color: rgba(51, 255, 51, 0.3);
+            border-style: solid;
+        }
+        .viewfinder::before {
+            top: 10px;
+            left: 10px;
+            border-width: 2px 0 0 2px;
+        }
+        .viewfinder::after {
+            bottom: 10px;
+            right: 10px;
+            border-width: 0 2px 2px 0;
+        }
+
+        .corner-tr, .corner-bl {
+            position: absolute;
+            width: 30px;
+            height: 30px;
+            border-color: rgba(51, 255, 51, 0.3);
+            border-style: solid;
+            z-index: 4;
+        }
+        .corner-tr {
+            top: 10px;
+            right: 10px;
+            border-width: 2px 2px 0 0;
+        }
+        .corner-bl {
+            bottom: 10px;
+            left: 10px;
+            border-width: 0 0 2px 2px;
+        }
+
+        /* Photo preview in viewfinder */
+        .preview-img {
+            width: 140px;
+            height: 140px;
+            object-fit: cover;
+            border-radius: 4px;
+            border: 2px solid rgba(51, 255, 51, 0.3);
+            display: none;
+            margin-bottom: 12px;
+        }
+
+        .welcome-text {
+            color: #33ff33;
+            font-size: 28px;
+            text-align: center;
+            text-shadow: 0 0 12px rgba(51, 255, 51, 0.5);
+            line-height: 1.4;
+            margin-bottom: 16px;
+        }
+
+        .welcome-sub {
+            color: #22aa22;
+            font-size: 18px;
+            text-align: center;
+            text-shadow: 0 0 6px rgba(34, 170, 34, 0.3);
+        }
+
+        .table-badge {
+            display: inline-block;
+            color: #ffaa00;
+            font-size: 20px;
+            text-shadow: 0 0 8px rgba(255, 170, 0, 0.4);
+            margin-top: 8px;
+        }
+
+        /* === FORM ELEMENTS === */
+        .input-row {
+            width: 100%;
+            margin-top: 14px;
+            position: relative;
+            z-index: 3;
+        }
+
+        .lcd-input {
+            width: 100%;
+            background: rgba(51, 255, 51, 0.08);
+            border: 1.5px solid rgba(51, 255, 51, 0.25);
+            border-radius: 4px;
+            color: #33ff33;
+            font-family: 'VT323', monospace;
+            font-size: 20px;
+            padding: 10px 14px;
+            outline: none;
+            text-shadow: 0 0 6px rgba(51, 255, 51, 0.3);
+        }
+
+        .lcd-input::placeholder {
+            color: rgba(51, 255, 51, 0.3);
+        }
+
+        .lcd-input:focus {
+            border-color: rgba(51, 255, 51, 0.5);
+            background: rgba(51, 255, 51, 0.12);
+        }
+
+        .lcd-label {
+            color: #22aa22;
+            font-size: 16px;
+            margin-bottom: 4px;
+            display: block;
+        }
+
+        /* === TIMESTAMP === */
+        .timestamp {
+            color: #ff6633;
+            font-size: 17px;
+            text-align: right;
+            margin-top: 10px;
+            text-shadow: 0 0 6px rgba(255, 102, 51, 0.4);
+            position: relative;
+            z-index: 3;
+            font-variant-numeric: tabular-nums;
+        }
+
+        /* === CAMERA BUTTONS === */
+        .button-row {
+            display: flex;
+            gap: 10px;
+            margin-top: 14px;
+        }
+
+        .shutter-btn {
+            flex: 1;
+            height: 62px;
+            background: linear-gradient(180deg, #e8413a, #c1271f);
+            border: none;
+            border-radius: 12px;
+            color: #fff;
+            font-family: 'Silkscreen', monospace;
+            font-size: 14px;
+            cursor: pointer;
+            box-shadow:
+                0 4px 12px rgba(0,0,0,0.4),
+                inset 0 1px 0 rgba(255,255,255,0.2),
+                inset 0 -2px 0 rgba(0,0,0,0.2);
+            transition: all 0.1s;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
+
+        .shutter-btn:active:not(:disabled) {
+            transform: translateY(2px);
+            box-shadow:
+                0 2px 6px rgba(0,0,0,0.4),
+                inset 0 1px 0 rgba(255,255,255,0.1);
+        }
+
+        .shutter-btn.gallery {
+            background: linear-gradient(180deg, #555, #3a3a3a);
+            flex: 0.7;
+        }
+
+        .shutter-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        /* === UPLOAD STATES === */
+        .upload-state {
+            display: none;
+            width: 100%;
+            text-align: center;
+        }
+
+        .upload-state.active {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* Progress bar */
+        .progress-bar {
+            width: 80%;
+            height: 8px;
+            background: rgba(51, 255, 51, 0.15);
+            border-radius: 4px;
+            overflow: hidden;
+            margin: 16px 0;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: #33ff33;
+            border-radius: 4px;
+            width: 0%;
+            transition: width 0.3s;
+            box-shadow: 0 0 10px rgba(51, 255, 51, 0.5);
+        }
+
+        .uploading-text {
+            color: #33ff33;
+            font-size: 22px;
+            text-shadow: 0 0 10px rgba(51, 255, 51, 0.5);
+            animation: blink 1s infinite;
+        }
+
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.4; }
+        }
+
+        /* Success state */
+        .success-icon {
+            font-size: 48px;
+            margin-bottom: 10px;
+        }
+
+        .success-text {
+            color: #33ff33;
+            font-size: 26px;
+            text-shadow: 0 0 12px rgba(51, 255, 51, 0.6);
+        }
+
+        .success-sub {
+            color: #22aa22;
+            font-size: 16px;
+            text-shadow: 0 0 6px rgba(34, 170, 34, 0.3);
+            margin-top: 4px;
+        }
+
+        .another-btn {
+            color: #33ff33;
+            background: none;
+            border: 1.5px solid rgba(51, 255, 51, 0.3);
+            font-family: 'VT323', monospace;
+            font-size: 20px;
+            padding: 12px 28px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-top: 14px;
+        }
+
+        .another-btn:active {
+            background: rgba(51, 255, 51, 0.1);
+        }
+
+        /* Error */
+        .error-text {
+            color: #ff4444;
+            font-size: 20px;
+            text-shadow: 0 0 8px rgba(255, 68, 68, 0.5);
+        }
+
+        /* === REC DOT === */
+        .rec-dot {
+            display: none;
+            position: absolute;
+            top: 14px;
+            left: 14px;
+            z-index: 5;
+        }
+
+        .rec-dot.active {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .rec-dot-circle {
+            width: 8px;
+            height: 8px;
+            background: #ff3333;
+            border-radius: 50%;
+            animation: blink 1.2s infinite;
+            box-shadow: 0 0 6px rgba(255, 51, 51, 0.6);
+        }
+
+        .rec-dot-label {
+            color: #ff3333;
+            font-size: 14px;
+            font-family: 'VT323', monospace;
+            text-shadow: 0 0 4px rgba(255, 51, 51, 0.4);
+        }
+
+        /* === GRIP TEXTURE === */
+        .grip {
+            position: absolute;
+            right: -2px;
+            top: 30px;
+            bottom: 30px;
+            width: 14px;
+            background: repeating-linear-gradient(
+                180deg,
+                #555 0px,
+                #555 3px,
+                #4a4a4a 3px,
+                #4a4a4a 6px
+            );
+            border-radius: 0 18px 18px 0;
+        }
+
+        /* Hidden file inputs */
+        input[type="file"] {
+            display: none;
+        }
+
+        /* === FLASH ANIMATION === */
+        .flash-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #fff;
+            opacity: 0;
+            pointer-events: none;
+            z-index: 100;
+            transition: opacity 0.1s;
+        }
+
+        .flash-overlay.fire {
+            opacity: 0.85;
+            transition: opacity 0.05s;
+        }
+    </style>
+</head>
+<body>
+
+<div class="flash-overlay" id="flashOverlay"></div>
+
+<div class="camera">
+    <div class="brand">WedCam &bull; {{ table if table else "Guest" }}</div>
+    <div class="grip"></div>
+
+    <div class="lcd">
+        <!-- Status Bar -->
+        <div class="status-bar">
+            <div class="battery status-item">
+                <div class="battery-body"><div class="battery-fill"></div></div>
+            </div>
+            <div class="status-item" style="font-size: 14px;">JPG</div>
+            <div class="shot-counter" id="shotCounter">---</div>
+        </div>
+
+        <!-- Viewfinder area -->
+        <div class="viewfinder" id="viewfinder">
+            <div class="corner-tr"></div>
+            <div class="corner-bl"></div>
+
+            <div class="rec-dot" id="recDot">
+                <div class="rec-dot-circle"></div>
+                <span class="rec-dot-label">REC</span>
+            </div>
+
+            <!-- Photo preview -->
+            <img class="preview-img" id="previewImg" src="" alt="preview">
+
+            <!-- STATE: Ready -->
+            <div class="upload-state active" id="stateReady">
+                <div class="welcome-text">
+                    Snap a memory!
+                </div>
+                <div class="welcome-sub">
+                    tap the shutter button below
+                </div>
+                {% if table %}
+                <div class="table-badge">TABLE {{ table }}</div>
+                {% endif %}
+
+                <div class="input-row">
+                    <label class="lcd-label">Your name (optional)</label>
+                    <input type="text" class="lcd-input" id="guestName"
+                           placeholder="Anonymous" maxlength="30" autocomplete="off">
+                </div>
+            </div>
+
+            <!-- STATE: Uploading -->
+            <div class="upload-state" id="stateUploading">
+                <div class="uploading-text">Developing...</div>
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progressFill"></div>
+                </div>
+            </div>
+
+            <!-- STATE: Success -->
+            <div class="upload-state" id="stateSuccess">
+                <div class="success-icon">&#10004;</div>
+                <div class="success-text">SAVED!</div>
+                <div class="success-sub">Thanks for the memory</div>
+                <button class="another-btn" onclick="resetState()">
+                    [ Take Another ]
+                </button>
+            </div>
+
+            <!-- STATE: Error -->
+            <div class="upload-state" id="stateError">
+                <div class="error-text" id="errorMsg">ERROR</div>
+                <button class="another-btn" onclick="resetState()">
+                    [ Try Again ]
+                </button>
+            </div>
+        </div>
+
+        <!-- Timestamp -->
+        <div class="timestamp" id="timestamp"></div>
+    </div>
+
+    <!-- Shutter buttons -->
+    <div class="button-row">
+        <button class="shutter-btn" id="btnCapture" onclick="capturePhoto()">
+            &#128247; Take Photo
+        </button>
+        <button class="shutter-btn gallery" id="btnGallery" onclick="pickFromGallery()">
+            &#128193; Upload
+        </button>
+    </div>
+
+    <input type="file" id="fileCapture" accept="image/*" capture="environment">
+    <input type="file" id="filePick" accept="image/*">
+</div>
+
+<script>
+    const table = "{{ table }}";
+
+    // === CLOCK ===
+    function updateTimestamp() {
+        const now = new Date();
+        const y = now.getFullYear();
+        const m = String(now.getMonth() + 1).padStart(2, '0');
+        const d = String(now.getDate()).padStart(2, '0');
+        const h = String(now.getHours()).padStart(2, '0');
+        const min = String(now.getMinutes()).padStart(2, '0');
+        const s = String(now.getSeconds()).padStart(2, '0');
+        document.getElementById('timestamp').textContent =
+            `${y}.${m}.${d}  ${h}:${min}:${s}`;
+    }
+    setInterval(updateTimestamp, 1000);
+    updateTimestamp();
+
+    // === SHOT COUNTER ===
+    function updateShotCounter() {
+        fetch('/count')
+            .then(r => r.json())
+            .then(data => {
+                document.getElementById('shotCounter').textContent =
+                    String(data.count).padStart(4, '0');
+            })
+            .catch(() => {});
+    }
+    updateShotCounter();
+
+    // === FLASH EFFECT ===
+    function fireFlash() {
+        const overlay = document.getElementById('flashOverlay');
+        overlay.classList.add('fire');
+        setTimeout(() => overlay.classList.remove('fire'), 150);
+    }
+
+    // === STATE MANAGEMENT ===
+    function showState(stateId) {
+        document.querySelectorAll('.upload-state').forEach(el => {
+            el.classList.remove('active');
+        });
+        document.getElementById(stateId).classList.add('active');
+    }
+
+    function resetState() {
+        showState('stateReady');
+        document.getElementById('btnCapture').disabled = false;
+        document.getElementById('btnGallery').disabled = false;
+        document.getElementById('recDot').classList.remove('active');
+        document.getElementById('progressFill').style.width = '0%';
+        document.getElementById('previewImg').style.display = 'none';
+    }
+
+    // === CAPTURE ===
+    function capturePhoto() {
+        document.getElementById('fileCapture').click();
+    }
+
+    function pickFromGallery() {
+        document.getElementById('filePick').click();
+    }
+
+    document.getElementById('fileCapture').addEventListener('change', handleFile);
+    document.getElementById('filePick').addEventListener('change', handleFile);
+
+    function handleFile(e) {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        // Show preview in viewfinder
+        const preview = document.getElementById('previewImg');
+        preview.src = URL.createObjectURL(file);
+        preview.style.display = 'block';
+
+        fireFlash();
+        uploadFile(file);
+        e.target.value = '';
+    }
+
+    function uploadFile(file) {
+        document.getElementById('btnCapture').disabled = true;
+        document.getElementById('btnGallery').disabled = true;
+        document.getElementById('recDot').classList.add('active');
+
+        showState('stateUploading');
+
+        const formData = new FormData();
+        formData.append('photo', file);
+        formData.append('table', table);
+        formData.append('guest_name', document.getElementById('guestName').value || 'anonymous');
+
+        const xhr = new XMLHttpRequest();
+
+        xhr.upload.addEventListener('progress', (e) => {
+            if (e.lengthComputable) {
+                const pct = Math.round((e.loaded / e.total) * 100);
+                document.getElementById('progressFill').style.width = pct + '%';
+            }
+        });
+
+        xhr.addEventListener('load', () => {
+            document.getElementById('recDot').classList.remove('active');
+
+            if (xhr.status === 200) {
+                const data = JSON.parse(xhr.responseText);
+                showState('stateSuccess');
+                updateShotCounter();
+
+                if (data.thumb) {
+                    document.getElementById('previewImg').src =
+                        '/thumbs/' + data.thumb;
+                }
+            } else {
+                let msg = 'Upload failed';
+                try { msg = JSON.parse(xhr.responseText).error; } catch(e) {}
+                document.getElementById('errorMsg').textContent = msg;
+                showState('stateError');
+            }
+        });
+
+        xhr.addEventListener('error', () => {
+            document.getElementById('recDot').classList.remove('active');
+            document.getElementById('errorMsg').textContent = 'Connection error';
+            showState('stateError');
+        });
+
+        xhr.open('POST', '/upload');
+        xhr.send(formData);
+    }
+</script>
+
+</body>
+</html>

@@ -1,0 +1,576 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Wedding Cam</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+            -webkit-touch-callout: none;
+            user-select: none;
+        }
+
+        html, body {
+            height: 100%;
+            overflow: hidden;
+            position: fixed;
+            width: 100%;
+        }
+
+        body {
+            background: #000;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-family: 'Inter', sans-serif;
+        }
+
+        .camera {
+            width: 100vw;
+            height: 100dvh;
+            max-width: 430px;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            background: #000;
+        }
+
+        /* Background image — frosted & lightened */
+        .bg-image {
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%;
+            height: 100%;
+            background: url('/static/clear-bg.png') 58% center / cover no-repeat;
+            z-index: 0;
+            filter: brightness(1.35) contrast(0.9) saturate(0.85);
+        }
+
+        /* Frosted white wash over the bg */
+        .bg-dim {
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(255, 255, 255, 0.12);
+            backdrop-filter: blur(1.5px);
+            -webkit-backdrop-filter: blur(1.5px);
+            z-index: 1;
+        }
+
+        /* === CONTENT === */
+        .content-layer {
+            position: relative;
+            z-index: 10;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Top bar */
+        .top-bar {
+            padding: 16px 18px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .brand {
+            font-size: 15px;
+            font-weight: 700;
+            color: #fff;
+            letter-spacing: 0.5px;
+            flex: 1;
+            margin-right: 10px;
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            padding: 6px 12px;
+            border-radius: 10px;
+        }
+
+        .counter-pill {
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255,255,255,0.2);
+            border-radius: 20px;
+            padding: 5px 14px;
+        }
+
+        .counter-num {
+            font-size: 18px;
+            font-weight: 700;
+            color: #fff;
+            text-shadow: 0 0 8px rgba(255,255,255,0.3);
+        }
+
+        /* Main area */
+        .main-area {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 0 20px;
+        }
+
+        /* Photo preview — positioned in the film gate area */
+        .preview-img {
+            position: absolute;
+            bottom: 24%;
+            left: 0;
+            right: 0%;
+            margin: 0 auto;
+            width: 100px;
+            height: 100px;
+            object-fit: cover;
+            border-radius: 6px;
+            border: 2px solid rgba(255,255,255,0.4);
+            display: none;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.7);
+            z-index: 5;
+        }
+
+        /* Glass card for text content */
+        .glass-card {
+            background: rgba(0, 0, 0, 0.65);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255,255,255,0.15);
+            border-radius: 20px;
+            padding: 28px 24px;
+            width: 100%;
+            max-width: 320px;
+        }
+
+        .cam-title {
+            font-size: 26px;
+            font-weight: 700;
+            color: #fff;
+            text-align: center;
+            margin-bottom: 4px;
+            text-shadow: 0 2px 8px rgba(0,0,0,0.6);
+        }
+
+        .cam-subtitle {
+            font-size: 14px;
+            font-weight: 500;
+            color: rgba(255,255,255,0.7);
+            text-align: center;
+            margin-bottom: 18px;
+            text-shadow: 0 1px 4px rgba(0,0,0,0.5);
+        }
+
+        .table-tag {
+            display: block;
+            text-align: center;
+            margin-bottom: 18px;
+        }
+
+        .table-tag span {
+            display: inline-block;
+            background: rgba(255,255,255,0.1);
+            border: 1px solid rgba(255,255,255,0.15);
+            color: rgba(255,255,255,0.8);
+            font-size: 12px;
+            font-weight: 700;
+            padding: 4px 16px;
+            border-radius: 20px;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+
+        .name-label {
+            font-size: 11px;
+            font-weight: 600;
+            color: rgba(255,255,255,0.35);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 6px;
+            display: block;
+        }
+
+        .name-input {
+            width: 100%;
+            background: rgba(255,255,255,0.07);
+            border: 1.5px solid rgba(255,255,255,0.12);
+            border-radius: 12px;
+            color: #fff;
+            font-family: 'Inter', sans-serif;
+            font-size: 17px;
+            padding: 12px 16px;
+            outline: none;
+            text-align: center;
+        }
+
+        .name-input::placeholder {
+            color: rgba(255,255,255,0.2);
+        }
+
+        .name-input:focus {
+            border-color: rgba(255,255,255,0.3);
+            background: rgba(255,255,255,0.1);
+        }
+
+        /* === UPLOAD STATES === */
+        .upload-state {
+            display: none;
+            width: 100%;
+            text-align: center;
+        }
+
+        .upload-state.active {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .developing-text {
+            font-size: 20px;
+            font-weight: 600;
+            color: #fff;
+            text-shadow: 0 2px 8px rgba(0,0,0,0.6);
+            animation: blink 1.2s infinite;
+        }
+
+        .progress-bar {
+            width: 80%;
+            max-width: 240px;
+            height: 5px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 3px;
+            overflow: hidden;
+            margin: 16px 0;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: #fff;
+            border-radius: 3px;
+            width: 0%;
+            transition: width 0.3s;
+            box-shadow: 0 0 10px rgba(255,255,255,0.4);
+        }
+
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.4; }
+        }
+
+        .success-icon {
+            width: 56px;
+            height: 56px;
+            border-radius: 50%;
+            background: rgba(0, 0, 0, 0.5);
+            border: 2px solid rgba(255,255,255,0.4);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 12px;
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+        }
+
+        .success-icon svg {
+            width: 28px;
+            height: 28px;
+        }
+
+        .success-text {
+            font-size: 24px;
+            font-weight: 700;
+            color: #fff;
+            text-shadow: 0 2px 10px rgba(0,0,0,0.8);
+        }
+
+        .success-sub {
+            font-size: 14px;
+            color: rgba(255,255,255,0.9);
+            margin-top: 8px;
+            background: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            padding: 6px 18px;
+            border-radius: 16px;
+            text-shadow: 0 1px 6px rgba(0,0,0,0.7);
+        }
+
+        .another-btn {
+            background: rgba(255, 255, 255, 0.88);
+            border: 2px solid #fff;
+            color: #111;
+            font-family: 'Inter', sans-serif;
+            font-size: 17px;
+            font-weight: 700;
+            padding: 14px 36px;
+            border-radius: 16px;
+            cursor: pointer;
+            margin-top: 14px;
+        }
+
+        .another-btn:active {
+            background: rgba(255, 255, 255, 0.65);
+        }
+
+        .error-text {
+            font-size: 16px;
+            font-weight: 600;
+            color: #ff6b6b;
+            text-shadow: 0 2px 8px rgba(0,0,0,0.5);
+        }
+
+        /* === BOTTOM BUTTONS === */
+        .bottom-area {
+            padding: 12px 18px 32px;
+        }
+
+        .shutter-row {
+            display: flex;
+            gap: 12px;
+        }
+
+        .shutter-btn {
+            flex: 1;
+            height: 72px;
+            border: none;
+            border-radius: 16px;
+            font-family: 'Inter', sans-serif;
+            font-size: 19px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.1s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .shutter-btn:active:not(:disabled) {
+            transform: translateY(2px);
+        }
+
+        .shutter-btn:disabled {
+            opacity: 0.35;
+        }
+
+        .btn-snap {
+            background: rgba(255, 255, 255, 0.92);
+            border: 2px solid #fff;
+            color: #111;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.4);
+        }
+
+        .btn-snap:active:not(:disabled) {
+            background: rgba(255, 255, 255, 0.75);
+        }
+
+        .btn-gallery {
+            background: rgba(255, 255, 255, 0.75);
+            border: 2px solid #fff;
+            color: #333;
+            flex: 0.8;
+            font-size: 17px;
+        }
+
+        .btn-gallery:active:not(:disabled) {
+            background: rgba(255, 255, 255, 0.55);
+        }
+
+        /* Hidden inputs */
+        input[type="file"] { display: none; }
+
+        /* Flash animation */
+        .flash-overlay {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: #fff;
+            opacity: 0;
+            pointer-events: none;
+            z-index: 100;
+            transition: opacity 0.1s;
+        }
+        .flash-overlay.fire {
+            opacity: 0.85;
+            transition: opacity 0.05s;
+        }
+    </style>
+</head>
+<body>
+
+<div class="flash-overlay" id="flashOverlay"></div>
+
+<div class="camera">
+    <div class="bg-image"></div>
+    <div class="bg-dim"></div>
+
+    <!-- Photo preview in the film gate area -->
+    <img class="preview-img" id="previewImg" src="" alt="preview">
+
+    <div class="content-layer">
+        <div class="top-bar">
+            <div class="brand">The Yocius/Strickland Wedding</div>
+            <div class="counter-pill">
+                <span class="counter-num" id="shotCounter">--</span>
+            </div>
+        </div>
+
+        <div class="main-area">
+            <!-- Ready -->
+            <div class="upload-state active" id="stateReady">
+                <div class="glass-card">
+                    <div class="cam-title">Snap a Memory</div>
+                    <div class="cam-subtitle">capture this moment forever</div>
+                    {% if table %}
+                    <div class="table-tag"><span>Table {{ table }}</span></div>
+                    {% endif %}
+                    <div>
+                        <label class="name-label">Your name (optional)</label>
+                        <input type="text" class="name-input" id="guestName"
+                               placeholder="Anonymous" maxlength="30" autocomplete="off">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Uploading -->
+            <div class="upload-state" id="stateUploading">
+                <div class="glass-card">
+                    <div class="developing-text">Developing...</div>
+                    <div style="display:flex;justify-content:center">
+                        <div class="progress-bar">
+                            <div class="progress-fill" id="progressFill"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Success -->
+            <div class="upload-state" id="stateSuccess">
+                <div class="success-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"
+                         stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="20 6 9 17 4 12"></polyline>
+                    </svg>
+                </div>
+                <div class="success-text">Photo Saved!</div>
+                <div class="success-sub">Thanks for the memory</div>
+                <button class="another-btn" onclick="resetState()">Take Another</button>
+            </div>
+
+            <!-- Error -->
+            <div class="upload-state" id="stateError">
+                <div class="error-text" id="errorMsg">Something went wrong</div>
+                <button class="another-btn" onclick="resetState()">Try Again</button>
+            </div>
+        </div>
+
+        <div class="bottom-area">
+            <div class="shutter-row">
+                <button class="shutter-btn btn-snap" id="btnCapture" onclick="capturePhoto()">
+                    &#128248; SNAP
+                </button>
+                <button class="shutter-btn btn-gallery" id="btnGallery" onclick="pickFromGallery()">
+                    &#128444; Upload
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <input type="file" id="fileCapture" accept="image/*" capture="environment">
+    <input type="file" id="filePick" accept="image/*">
+</div>
+
+<script>
+    const table = "{{ table }}";
+
+    function updateShotCounter() {
+        fetch('/count').then(r => r.json()).then(data => {
+            document.getElementById('shotCounter').textContent =
+                String(data.count).padStart(4, '0');
+        }).catch(() => {});
+    }
+    updateShotCounter();
+
+    function fireFlash() {
+        const o = document.getElementById('flashOverlay');
+        o.classList.add('fire');
+        setTimeout(() => o.classList.remove('fire'), 150);
+    }
+
+    function showState(id) {
+        document.querySelectorAll('.upload-state').forEach(el => el.classList.remove('active'));
+        document.getElementById(id).classList.add('active');
+    }
+
+    function resetState() {
+        showState('stateReady');
+        document.getElementById('btnCapture').disabled = false;
+        document.getElementById('btnGallery').disabled = false;
+        document.getElementById('progressFill').style.width = '0%';
+        document.getElementById('previewImg').style.display = 'none';
+    }
+
+    function capturePhoto() { document.getElementById('fileCapture').click(); }
+    function pickFromGallery() { document.getElementById('filePick').click(); }
+
+    document.getElementById('fileCapture').addEventListener('change', handleFile);
+    document.getElementById('filePick').addEventListener('change', handleFile);
+
+    function handleFile(e) {
+        const file = e.target.files[0];
+        if (!file) return;
+        const preview = document.getElementById('previewImg');
+        preview.src = URL.createObjectURL(file);
+        preview.style.display = 'block';
+        fireFlash();
+        uploadFile(file);
+        e.target.value = '';
+    }
+
+    function uploadFile(file) {
+        document.getElementById('btnCapture').disabled = true;
+        document.getElementById('btnGallery').disabled = true;
+        showState('stateUploading');
+
+        const fd = new FormData();
+        fd.append('photo', file);
+        fd.append('table', table);
+        fd.append('guest_name', document.getElementById('guestName').value || 'anonymous');
+
+        const xhr = new XMLHttpRequest();
+        xhr.upload.addEventListener('progress', (e) => {
+            if (e.lengthComputable) {
+                document.getElementById('progressFill').style.width =
+                    Math.round((e.loaded / e.total) * 100) + '%';
+            }
+        });
+        xhr.addEventListener('load', () => {
+            if (xhr.status === 200) {
+                const data = JSON.parse(xhr.responseText);
+                showState('stateSuccess');
+                updateShotCounter();
+                if (data.thumb) document.getElementById('previewImg').src = '/thumbs/' + data.thumb;
+            } else {
+                let msg = 'Upload failed';
+                try { msg = JSON.parse(xhr.responseText).error; } catch(e) {}
+                document.getElementById('errorMsg').textContent = msg;
+                showState('stateError');
+            }
+        });
+        xhr.addEventListener('error', () => {
+            document.getElementById('errorMsg').textContent = 'Connection lost';
+            showState('stateError');
+        });
+        xhr.open('POST', '/upload');
+        xhr.send(fd);
+    }
+</script>
+</body>
+</html>
