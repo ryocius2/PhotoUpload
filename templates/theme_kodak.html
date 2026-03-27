@@ -46,7 +46,7 @@
         /* Kodak yellow curve - the big swoosh */
         .curve-yellow {
             position: absolute;
-            top: -40%;
+            top: -55%;
             right: -30%;
             width: 140%;
             height: 90%;
@@ -58,12 +58,36 @@
         /* Red accent curve */
         .curve-red {
             position: absolute;
-            top: -42%;
+            top: -57%;
             right: -32%;
             width: 142%;
             height: 90%;
             background: #d32f2f;
             border-radius: 0 0 50% 50%;
+            z-index: 0;
+        }
+
+        /* Bottom yellow curve */
+        .curve-yellow-bottom {
+            position: absolute;
+            bottom: -55%;
+            left: -30%;
+            width: 140%;
+            height: 90%;
+            background: #fdd835;
+            border-radius: 50% 50% 0 0;
+            z-index: 1;
+        }
+
+        /* Bottom red accent curve */
+        .curve-red-bottom {
+            position: absolute;
+            bottom: -57%;
+            left: -32%;
+            width: 142%;
+            height: 90%;
+            background: #d32f2f;
+            border-radius: 50% 50% 0 0;
             z-index: 0;
         }
 
@@ -333,9 +357,9 @@
         }
 
         .another-btn {
-            background: transparent;
-            border: 2px solid #fdd835;
-            color: #fdd835;
+            background: #fff;
+            border: 2px solid #fff;
+            color: #1a1a1a;
             font-family: 'Fredoka', sans-serif;
             font-size: 16px;
             font-weight: 600;
@@ -407,11 +431,12 @@
         }
 
         .btn-gallery {
-            background: #fdd835;
-            color: #1a1a1a;
+            background: linear-gradient(180deg, #333, #222);
+            color: #fff;
             box-shadow:
-                0 5px 0 #c6a700,
+                0 5px 0 #111,
                 0 8px 20px rgba(0,0,0,0.4);
+            border: 2px solid #555;
             flex: 0.6;
             font-size: 16px;
         }
@@ -463,6 +488,8 @@
 <div class="camera">
     <div class="curve-red"></div>
     <div class="curve-yellow"></div>
+    <div class="curve-red-bottom"></div>
+    <div class="curve-yellow-bottom"></div>
     <div class="kodak-stripe"><span></span><span></span><span></span></div>
 
     <!-- Top -->
@@ -541,7 +568,7 @@
     </div>
 
     <input type="file" id="fileCapture" accept="image/*" capture="environment">
-    <input type="file" id="filePick" accept="image/*">
+    <input type="file" id="filePick" accept="image/*" multiple>
 </div>
 
 <script>
@@ -577,56 +604,92 @@
     function capturePhoto() { document.getElementById('fileCapture').click(); }
     function pickFromGallery() { document.getElementById('filePick').click(); }
 
-    document.getElementById('fileCapture').addEventListener('change', handleFile);
-    document.getElementById('filePick').addEventListener('change', handleFile);
+    document.getElementById('fileCapture').addEventListener('change', handleSingleFile);
+    document.getElementById('filePick').addEventListener('change', handleMultiFile);
 
-    function handleFile(e) {
+    function handleSingleFile(e) {
         const file = e.target.files[0];
         if (!file) return;
         const preview = document.getElementById('previewImg');
         preview.src = URL.createObjectURL(file);
         preview.style.display = 'block';
         fireFlash();
-        uploadFile(file);
+        uploadFiles([file]);
         e.target.value = '';
     }
 
-    function uploadFile(file) {
+    function handleMultiFile(e) {
+        const files = Array.from(e.target.files);
+        if (!files.length) return;
+        const preview = document.getElementById('previewImg');
+        preview.src = URL.createObjectURL(files[files.length - 1]);
+        preview.style.display = 'block';
+        fireFlash();
+        uploadFiles(files);
+        e.target.value = '';
+    }
+
+    async function uploadFiles(files) {
         document.getElementById('btnCapture').disabled = true;
         document.getElementById('btnGallery').disabled = true;
         showState('stateUploading');
 
-        const fd = new FormData();
-        fd.append('photo', file);
-        fd.append('table', table);
-        fd.append('guest_name', document.getElementById('guestName').value || 'anonymous');
+        const total = files.length;
+        let uploaded = 0;
+        let lastThumb = null;
+        const guestName = document.getElementById('guestName').value || 'anonymous';
 
-        const xhr = new XMLHttpRequest();
-        xhr.upload.addEventListener('progress', (e) => {
-            if (e.lengthComputable) {
-                document.getElementById('progressFill').style.width =
-                    Math.round((e.loaded / e.total) * 100) + '%';
-            }
-        });
-        xhr.addEventListener('load', () => {
-            if (xhr.status === 200) {
-                const data = JSON.parse(xhr.responseText);
-                showState('stateSuccess');
-                updateShotCounter();
-                if (data.thumb) document.getElementById('previewImg').src = '/thumbs/' + data.thumb;
-            } else {
-                let msg = 'Upload failed';
-                try { msg = JSON.parse(xhr.responseText).error; } catch(e) {}
-                document.getElementById('errorMsg').textContent = msg;
+        for (const file of files) {
+            try {
+                const result = await uploadSingleFile(file, guestName, uploaded, total);
+                uploaded++;
+                lastThumb = result.thumb;
+            } catch (err) {
+                document.getElementById('errorMsg').textContent =
+                    total > 1 ? `Failed on photo ${uploaded + 1} of ${total}` : 'Upload failed';
                 showState('stateError');
+                return;
             }
+        }
+
+        showState('stateSuccess');
+        updateShotCounter();
+        if (lastThumb) document.getElementById('previewImg').src = '/thumbs/' + lastThumb;
+
+        const sub = document.querySelector('#stateSuccess .success-sub');
+        if (total > 1) {
+            sub.textContent = `${total} photos saved! Thanks for the memories`;
+        } else {
+            sub.textContent = 'Thanks for the memory';
+        }
+    }
+
+    function uploadSingleFile(file, guestName, index, total) {
+        return new Promise((resolve, reject) => {
+            const fd = new FormData();
+            fd.append('photo', file);
+            fd.append('table', table);
+            fd.append('guest_name', guestName);
+
+            const xhr = new XMLHttpRequest();
+            xhr.upload.addEventListener('progress', (e) => {
+                if (e.lengthComputable) {
+                    const filePct = (e.loaded / e.total);
+                    const overallPct = Math.round(((index + filePct) / total) * 100);
+                    document.getElementById('progressFill').style.width = overallPct + '%';
+                }
+            });
+            xhr.addEventListener('load', () => {
+                if (xhr.status === 200) {
+                    resolve(JSON.parse(xhr.responseText));
+                } else {
+                    reject(new Error('Upload failed'));
+                }
+            });
+            xhr.addEventListener('error', () => reject(new Error('Connection lost')));
+            xhr.open('POST', '/upload');
+            xhr.send(fd);
         });
-        xhr.addEventListener('error', () => {
-            document.getElementById('errorMsg').textContent = 'Connection lost';
-            showState('stateError');
-        });
-        xhr.open('POST', '/upload');
-        xhr.send(fd);
     }
 </script>
 </body>
