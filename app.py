@@ -14,7 +14,7 @@ from flask import (
     send_from_directory,
     url_for,
 )
-from PIL import Image
+from PIL import Image, ImageOps
 from werkzeug.utils import secure_filename
 
 load_dotenv()
@@ -41,7 +41,7 @@ def make_thumbnail(filepath, max_size=(400, 400)):
     """Create a thumbnail for the uploaded photo."""
     try:
         with Image.open(filepath) as img:
-            # Auto-rotate based on EXIF
+            img = ImageOps.exif_transpose(img)
             img = img.convert("RGB")
             img.thumbnail(max_size, Image.LANCZOS)
             thumb_name = Path(filepath).stem + ".jpg"
