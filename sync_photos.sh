@@ -15,7 +15,7 @@ LOG_FILE="$SCRIPT_DIR/sync.log"
 
 DEST_USER="ryoci"
 DEST_HOST="192.168.4.35"
-DEST_PATH="C:/Users/ryoci/OneDrive/Pictures/WeddingPhotos/"
+DEST_PATH="/C/Users/ryoci/OneDrive/Pictures/WeddingPhotos/"
 SSH_KEY="/home/pi/.ssh/id_ed25519"
 
 echo "[$(date '+%Y-%m-%d %H:%M:%S')] Starting sync..." >> "$LOG_FILE"
