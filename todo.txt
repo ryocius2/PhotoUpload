@@ -1,49 +1,104 @@
 Wedding Photo Upload - Setup TODO
 ==================================
 
-[ ] 1. TEST LOCALLY
+[x] 1. TEST LOCALLY
       - Double-click run_local.bat
       - Open http://localhost:5000/?table=7 in your phone or browser
       - Try taking a photo and uploading
       - Check that photos/ folder gets the image
 
 [ ] 2. SET UP RASPBERRY PI
-      - Flash Raspberry Pi OS Lite onto SD card
-      - SSH in and clone/copy this project over
+      - Flash Raspberry Pi OS Lite (64-bit) onto SD card via Imager
+        Settings: hostname=photoupload, enable SSH, set WiFi + password
+      - Boot with ethernet plugged in, find IP via arp -a (look for dc-a6-32 MAC)
+      - SSH in: ssh pi@<IP_ADDRESS>
+      - sudo apt update && sudo apt install -y git python3-pip python3-venv
+      - git clone https://github.com/ryocius2/PhotoUpload.git
+      - cd PhotoUpload
+      - python3 -m venv venv
+      - source venv/bin/activate
       - pip install -r requirements.txt
       - pip install qrcode[pil]
-      - cp .env.example .env and set a real SECRET_KEY
+      - cp .env.example .env
+      - python3 -c "import secrets; print(secrets.token_hex(32))"
+      - nano .env  (paste the key into SECRET_KEY, Ctrl+O Enter to save, Ctrl+X to exit)
 
-[ ] 3. CLOUDFLARE TUNNEL (public HTTPS access)
+[ ] 3. HARDEN THE PI (prevent SD card corruption & WiFi drops)
+      a) Mount USB drive for photo storage (all writes go to USB, not SD):
+         - Plug in the SanDisk USB drive
+         - sudo mkdir -p /mnt/photos
+         - sudo blkid   (find the USB drive, e.g. /dev/sda1)
+         - sudo mkfs.ext4 /dev/sda1   (format it — only need to do once!)
+         - sudo mount /dev/sda1 /mnt/photos
+         - sudo chown pi:pi /mnt/photos
+         - Make it permanent: sudo nano /etc/fstab
+           Add this line:
+           /dev/sda1 /mnt/photos ext4 defaults,noatime 0 2
+         - Update .env: nano ~/PhotoUpload/.env
+           Change UPLOAD_FOLDER to /mnt/photos
+
+      b) Disable WiFi power management:
+         - sudo nano /etc/NetworkManager/conf.d/wifi-powersave-off.conf
+           Add:
+           [connection]
+           wifi.powersave = 2
+
+      c) WiFi watchdog (auto-recovers dropped WiFi):
+         - sudo nano /usr/local/bin/wifi-watchdog.sh
+           Add:
+           #!/bin/bash
+           if ! ping -c 1 -W 5 8.8.8.8 > /dev/null 2>&1; then
+               nmcli radio wifi off
+               sleep 2
+               nmcli radio wifi on
+           fi
+         - sudo chmod +x /usr/local/bin/wifi-watchdog.sh
+         - sudo crontab -e
+           Add: */5 * * * * /usr/local/bin/wifi-watchdog.sh
+
+      d) Set root filesystem to read-only (optional, extra protection):
+         - sudo raspi-config -> Performance -> Overlay File System -> Enable
+         - This makes the SD card read-only, only /mnt/photos is writable
+         - NOTE: to make changes later you need to disable this first
+
+[ ] 4. CLOUDFLARE TUNNEL (public HTTPS access)
+      - Prereq: marandagetsyoshed.com DNS must be on Cloudflare
+        (buddy needs to change nameservers at eNom to Cloudflare's)
       - Install cloudflared on Pi:
           curl -L https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-arm64.deb -o cloudflared.deb
           sudo dpkg -i cloudflared.deb
       - cloudflared tunnel login
       - cloudflared tunnel create wedding-photos
-      - cloudflared tunnel route dns wedding-photos photos.YOURDOMAIN.com
+      - cloudflared tunnel route dns wedding-photos photos.marandagetsyoshed.com
       - cloudflared tunnel run --url http://localhost:5000 wedding-photos
-      - Note: you need a domain on Cloudflare (free plan works)
 
-[ ] 4. PRODUCTION SERVER
+[ ] 5. PRODUCTION SERVER
       - pip install gunicorn
-      - Run with: gunicorn -w 4 -b 0.0.0.0:5000 app:app
-      - Optional: set up systemd service so it starts on boot
+      - Run with: venv/bin/gunicorn -w 4 -b 0.0.0.0:5000 app:app
+      - Set up systemd service so it starts on boot:
+          sudo nano /etc/systemd/system/photoupload.service
+          [see project docs for service file contents]
+          sudo systemctl enable photoupload
+          sudo systemctl start photoupload
 
-[ ] 5. ONEDRIVE BACKUP
+[ ] 6. ONEDRIVE BACKUP
       - sudo apt install rclone
       - rclone config  (add "onedrive" remote, follow browser auth)
       - Test: rclone ls onedrive:
       - chmod +x sync_onedrive.sh
+      - Update sync_onedrive.sh PHOTO_DIR to /mnt/photos
       - crontab -e -> add: */10 * * * * /home/pi/PhotoUpload/sync_onedrive.sh
 
-[ ] 6. GENERATE QR CODES
-      - python generate_qr.py --url https://photos.YOURDOMAIN.com --tables 15
+[ ] 7. GENERATE QR CODES
+      - source venv/bin/activate
+      - python generate_qr.py --url https://photos.marandagetsyoshed.com --tables 15
       - Print the PNGs from qr_codes/ folder
       - Put them in table card holders or tent stands
 
-[ ] 7. DAY-OF CHECKLIST
-      - Pi plugged in and powered on at home
-      - Cloudflare tunnel running
+[ ] 8. DAY-OF CHECKLIST
+      - Pi plugged in and powered on at home (ethernet + power)
+      - Cloudflare tunnel running (should auto-start via systemd)
       - Test QR code from phone at venue (cell data, not home wifi)
       - Check OneDrive sync is working
-      - Bring a USB backup drive just in case
+      - Verify photo count is going up on the counter
+      - Have a way to SSH in from phone if needed (e.g. Termius app)

@@ -116,6 +116,35 @@ def serve_thumb(filename):
     return send_from_directory(THUMB_FOLDER, filename)
 
 
+@app.route("/photos/<filename>", methods=["GET", "DELETE"])
+def serve_photo(filename):
+    if request.method == "DELETE":
+        safe = secure_filename(filename)
+        photo_path = UPLOAD_FOLDER / safe
+        thumb_path = THUMB_FOLDER / (Path(safe).stem + ".jpg")
+        if not photo_path.exists():
+            return jsonify({"error": "Not found"}), 404
+        photo_path.unlink()
+        if thumb_path.exists():
+            thumb_path.unlink()
+        return jsonify({"success": True})
+    return send_from_directory(UPLOAD_FOLDER, filename)
+
+
+@app.route("/photos")
+def photo_list():
+    photos = []
+    for ext in ALLOWED_EXTENSIONS:
+        photos.extend(UPLOAD_FOLDER.glob(f"*.{ext}"))
+    photos.sort(key=lambda p: p.stat().st_mtime)
+    return jsonify([p.name for p in photos])
+
+
+@app.route("/slideshow")
+def slideshow():
+    return render_template("slideshow.html")
+
+
 @app.route("/count")
 def count():
     return jsonify({"count": get_photo_count()})
