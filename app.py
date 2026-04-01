@@ -31,6 +31,7 @@ THUMB_FOLDER = UPLOAD_FOLDER / "thumbs"
 THUMB_FOLDER.mkdir(parents=True, exist_ok=True)
 
 ALLOWED_EXTENSIONS = {"png", "jpg", "jpeg", "heic", "heif", "webp"}
+ADMIN_KEY = os.getenv("ADMIN_KEY", "wedding-admin-2026")
 
 
 def allowed_file(filename):
@@ -119,6 +120,8 @@ def serve_thumb(filename):
 @app.route("/photos/<filename>", methods=["GET", "DELETE"])
 def serve_photo(filename):
     if request.method == "DELETE":
+        if request.args.get("key") != ADMIN_KEY:
+            return jsonify({"error": "Unauthorized"}), 403
         safe = secure_filename(filename)
         photo_path = UPLOAD_FOLDER / safe
         thumb_path = THUMB_FOLDER / (Path(safe).stem + ".jpg")
@@ -142,7 +145,8 @@ def photo_list():
 
 @app.route("/slideshow")
 def slideshow():
-    return render_template("slideshow.html")
+    admin = request.args.get("admin", "") == ADMIN_KEY
+    return render_template("slideshow.html", admin=admin, admin_key=ADMIN_KEY if admin else "")
 
 
 @app.route("/count")
