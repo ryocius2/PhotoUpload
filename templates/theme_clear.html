@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Wedding Cam</title>
+    <title>YoSnap</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
@@ -233,6 +233,16 @@
             align-items: center;
         }
 
+        #stateSuccess.active {
+            opacity: 0.8;
+            animation: fadeOutSuccess 10s forwards;
+        }
+
+        @keyframes fadeOutSuccess {
+            0%, 70% { opacity: 0.8; }
+            100% { opacity: 0; display: none; }
+        }
+
         .developing-text {
             font-size: 20px;
             font-weight: 600;
@@ -388,10 +398,17 @@
             display: block;
             text-align: center;
             margin-top: 10px;
-            color: rgba(255,255,255,0.7);
+            color: #1a1a1a;
             font-size: 14px;
             font-weight: 600;
             text-decoration: none;
+            background: rgba(0,0,0,0.15);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            padding: 6px 16px;
+            border-radius: 20px;
+            color: #fff;
+            border: 1px solid rgba(255,255,255,0.3);
         }
 
         /* Hidden inputs */
@@ -426,7 +443,7 @@
 
     <div class="content-layer">
         <div class="top-bar">
-            <div class="brand">The Yocius/Strickland Wedding</div>
+            <div class="brand">YoSnap <span style="font-size:10px;opacity:0.7">Single Use</span></div>
             <div class="counter-pill">
                 <span class="counter-num" id="shotCounter">--</span>
             </div>
@@ -437,7 +454,7 @@
             <div class="upload-state active" id="stateReady">
                 <div class="glass-card">
                     <div class="cam-title">Snap a Memory</div>
-                    <div class="cam-subtitle">capture this moment forever</div>
+                    <div class="cam-subtitle">Capture this moment forever</div>
                     {% if table %}
                     <div class="table-tag"><span>Table {{ table }}</span></div>
                     {% endif %}
@@ -445,6 +462,17 @@
                         <label class="name-label">Your name (optional)</label>
                         <input type="text" class="name-input" id="guestName"
                                placeholder="Anonymous" maxlength="30" autocomplete="off">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Confirm -->
+            <div class="upload-state" id="stateConfirm">
+                <div class="glass-card">
+                    <div class="cam-title" id="confirmText">Upload this photo?</div>
+                    <div style="display:flex;gap:12px;justify-content:center;margin-top:12px">
+                        <button class="another-btn" onclick="confirmUpload()" style="background:#2e7d32;color:#fff">Upload</button>
+                        <button class="another-btn" onclick="cancelUpload()">Cancel</button>
                     </div>
                 </div>
             </div>
@@ -484,7 +512,7 @@
         <div class="bottom-area">
             <div class="shutter-row">
                 <button class="shutter-btn btn-snap" id="btnCapture" onclick="capturePhoto()">
-                    &#128248; SNAP
+                    &#128248; Snap
                 </button>
                 <button class="shutter-btn btn-gallery" id="btnGallery" onclick="pickFromGallery()">
                     &#128444; Upload
@@ -515,12 +543,22 @@
         setTimeout(() => o.classList.remove('fire'), 150);
     }
 
+    let successTimer = null;
+
     function showState(id) {
+        if (successTimer) { clearTimeout(successTimer); successTimer = null; }
         document.querySelectorAll('.upload-state').forEach(el => el.classList.remove('active'));
         document.getElementById(id).classList.add('active');
+
+        if (id === 'stateSuccess') {
+            document.getElementById('btnCapture').disabled = false;
+            document.getElementById('btnGallery').disabled = false;
+            successTimer = setTimeout(() => resetState(), 10000);
+        }
     }
 
     function resetState() {
+        if (successTimer) { clearTimeout(successTimer); successTimer = null; }
         showState('stateReady');
         document.getElementById('btnCapture').disabled = false;
         document.getElementById('btnGallery').disabled = false;
@@ -534,6 +572,8 @@
     document.getElementById('fileCapture').addEventListener('change', handleSingleFile);
     document.getElementById('filePick').addEventListener('change', handleMultiFile);
 
+    let pendingFiles = null;
+
     function handleSingleFile(e) {
         const file = e.target.files[0];
         if (!file) return;
@@ -541,7 +581,9 @@
         preview.src = URL.createObjectURL(file);
         preview.style.display = 'block';
         fireFlash();
-        uploadFiles([file]);
+        pendingFiles = [file];
+        document.getElementById('confirmText').textContent = 'Upload this photo?';
+        showState('stateConfirm');
         e.target.value = '';
     }
 
@@ -552,8 +594,23 @@
         preview.src = URL.createObjectURL(files[files.length - 1]);
         preview.style.display = 'block';
         fireFlash();
-        uploadFiles(files);
+        pendingFiles = files;
+        document.getElementById('confirmText').textContent =
+            files.length > 1 ? `Upload ${files.length} photos?` : 'Upload this photo?';
+        showState('stateConfirm');
         e.target.value = '';
+    }
+
+    function confirmUpload() {
+        if (pendingFiles) {
+            uploadFiles(pendingFiles);
+            pendingFiles = null;
+        }
+    }
+
+    function cancelUpload() {
+        pendingFiles = null;
+        resetState();
     }
 
     async function uploadFiles(files) {

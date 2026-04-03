@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Wedding Cam</title>
+    <title>YoSnap</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=VT323&family=Silkscreen&display=swap" rel="stylesheet">
     <style>
@@ -375,6 +375,16 @@
             justify-content: center;
         }
 
+        #stateSuccess.active {
+            opacity: 0.8;
+            animation: fadeOutSuccess 10s forwards;
+        }
+
+        @keyframes fadeOutSuccess {
+            0%, 70% { opacity: 0.8; }
+            100% { opacity: 0; display: none; }
+        }
+
         /* Progress bar */
         .progress-bar {
             width: 80%;
@@ -537,7 +547,7 @@
 <div class="flash-overlay" id="flashOverlay"></div>
 
 <div class="camera">
-    <div class="brand">WedCam &bull; {{ table if table else "Guest" }}</div>
+    <div class="brand">YoSnap <span style="font-size:8px;letter-spacing:1px;opacity:0.7">SINGLE USE</span> &bull; {{ table if table else "Guest" }}</div>
     <div class="grip"></div>
 
     <div class="lcd">
@@ -582,6 +592,19 @@
                 </div>
             </div>
 
+            <!-- STATE: Confirm -->
+            <div class="upload-state" id="stateConfirm">
+                <div class="welcome-text" id="confirmText">Upload this photo?</div>
+                <div style="display:flex;gap:12px;justify-content:center;margin-top:12px">
+                    <button class="another-btn" onclick="confirmUpload()" style="background:#2e7d32;color:#fff">
+                        [ Upload ]
+                    </button>
+                    <button class="another-btn" onclick="cancelUpload()">
+                        [ Cancel ]
+                    </button>
+                </div>
+            </div>
+
             <!-- STATE: Uploading -->
             <div class="upload-state" id="stateUploading">
                 <div class="uploading-text">Developing...</div>
@@ -616,7 +639,7 @@
     <!-- Shutter buttons -->
     <div class="button-row">
         <button class="shutter-btn" id="btnCapture" onclick="capturePhoto()">
-            &#128247; Take Photo
+            &#128247; Snap
         </button>
         <button class="shutter-btn gallery" id="btnGallery" onclick="pickFromGallery()">
             &#128193; Upload
@@ -666,14 +689,24 @@
     }
 
     // === STATE MANAGEMENT ===
+    let successTimer = null;
+
     function showState(stateId) {
+        if (successTimer) { clearTimeout(successTimer); successTimer = null; }
         document.querySelectorAll('.upload-state').forEach(el => {
             el.classList.remove('active');
         });
         document.getElementById(stateId).classList.add('active');
+
+        if (stateId === 'stateSuccess') {
+            document.getElementById('btnCapture').disabled = false;
+            document.getElementById('btnGallery').disabled = false;
+            successTimer = setTimeout(() => resetState(), 10000);
+        }
     }
 
     function resetState() {
+        if (successTimer) { clearTimeout(successTimer); successTimer = null; }
         showState('stateReady');
         document.getElementById('btnCapture').disabled = false;
         document.getElementById('btnGallery').disabled = false;
@@ -694,6 +727,8 @@
     document.getElementById('fileCapture').addEventListener('change', handleSingleFile);
     document.getElementById('filePick').addEventListener('change', handleMultiFile);
 
+    let pendingFiles = null;
+
     function handleSingleFile(e) {
         const file = e.target.files[0];
         if (!file) return;
@@ -701,7 +736,9 @@
         preview.src = URL.createObjectURL(file);
         preview.style.display = 'block';
         fireFlash();
-        uploadFiles([file]);
+        pendingFiles = [file];
+        document.getElementById('confirmText').textContent = 'Upload this photo?';
+        showState('stateConfirm');
         e.target.value = '';
     }
 
@@ -712,8 +749,23 @@
         preview.src = URL.createObjectURL(files[files.length - 1]);
         preview.style.display = 'block';
         fireFlash();
-        uploadFiles(files);
+        pendingFiles = files;
+        document.getElementById('confirmText').textContent =
+            files.length > 1 ? `Upload ${files.length} photos?` : 'Upload this photo?';
+        showState('stateConfirm');
         e.target.value = '';
+    }
+
+    function confirmUpload() {
+        if (pendingFiles) {
+            uploadFiles(pendingFiles);
+            pendingFiles = null;
+        }
+    }
+
+    function cancelUpload() {
+        pendingFiles = null;
+        resetState();
     }
 
     async function uploadFiles(files) {
