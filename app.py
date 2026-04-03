@@ -14,13 +14,20 @@ from flask import (
     send_from_directory,
     url_for,
 )
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
 from PIL import Image, ImageOps
 from werkzeug.utils import secure_filename
 
 load_dotenv()
 
+# Cap Pillow decompression to ~25 megapixels (prevents decompression bombs)
+Image.MAX_IMAGE_PIXELS = 25_000_000
+
 app = Flask(__name__)
 app.secret_key = os.getenv("SECRET_KEY", "dev-key-change-me")
+
+limiter = Limiter(get_remote_address, app=app, default_limits=[])
 
 MAX_UPLOAD_MB = int(os.getenv("MAX_UPLOAD_MB", "16"))
 app.config["MAX_CONTENT_LENGTH"] = MAX_UPLOAD_MB * 1024 * 1024
@@ -33,9 +40,32 @@ THUMB_FOLDER.mkdir(parents=True, exist_ok=True)
 ALLOWED_EXTENSIONS = {"png", "jpg", "jpeg", "heic", "heif", "webp"}
 ADMIN_KEY = os.getenv("ADMIN_KEY", "wedding-admin-2026")
 
+# Magic bytes for allowed image formats
+IMAGE_SIGNATURES = [
+    b"\xff\xd8\xff",          # JPEG
+    b"\x89PNG\r\n\x1a\n",    # PNG
+    b"RIFF",                   # WebP (RIFF....WEBP)
+    b"\x00\x00\x00",          # HEIC/HEIF (ftyp box, starts with size bytes)
+]
+
 
 def allowed_file(filename):
     return "." in filename and filename.rsplit(".", 1)[1].lower() in ALLOWED_EXTENSIONS
+
+
+def valid_image_bytes(stream):
+    """Check that the file starts with known image magic bytes."""
+    header = stream.read(12)
+    stream.seek(0)
+    if not header:
+        return False
+    for sig in IMAGE_SIGNATURES:
+        if header.startswith(sig):
+            return True
+    # HEIC/HEIF: check for 'ftyp' marker at offset 4
+    if header[4:8] == b"ftyp":
+        return True
+    return False
 
 
 def make_thumbnail(filepath, max_size=(400, 400)):
@@ -61,6 +91,14 @@ def get_photo_count():
     return count
 
 
+@app.after_request
+def set_security_headers(response):
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["Content-Security-Policy"] = "default-src 'self' fonts.googleapis.com fonts.gstatic.com; style-src 'self' 'unsafe-inline' fonts.googleapis.com; font-src fonts.gstatic.com; img-src 'self' blob:; script-src 'self' 'unsafe-inline'"
+    return response
+
+
 VALID_THEMES = {"classic", "kodak", "clear"}
 
 
@@ -74,6 +112,7 @@ def index():
 
 
 @app.route("/upload", methods=["POST"])
+@limiter.limit("30/minute")
 def upload():
     table = request.form.get("table", "unknown")
     guest_name = request.form.get("guest_name", "anonymous")
@@ -87,6 +126,9 @@ def upload():
 
     if not allowed_file(file.filename):
         return jsonify({"error": "File type not allowed"}), 400
+
+    if not valid_image_bytes(file.stream):
+        return jsonify({"error": "File does not appear to be a valid image"}), 400
 
     # Build filename: table_timestamp_guestname_uuid.ext
     ext = file.filename.rsplit(".", 1)[1].lower()
