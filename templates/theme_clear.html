@@ -537,6 +537,14 @@
     }
     updateShotCounter();
 
+    // Double-tap shot counter to refresh
+    let lastTap = 0;
+    document.getElementById('shotCounter').addEventListener('click', () => {
+        const now = Date.now();
+        if (now - lastTap < 400) location.reload();
+        lastTap = now;
+    });
+
     function fireFlash() {
         const o = document.getElementById('flashOverlay');
         o.classList.add('fire');
